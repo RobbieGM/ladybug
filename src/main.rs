@@ -1,21 +1,17 @@
-use std::ops::Add;
+use std::str::FromStr;
 
-use board::Bughouse;
-use shakmaty::{fen::epd, ByColor, MaterialSide, Move, Position, Role, Setup, Square};
+use engine::{Engine, Until};
+use shakmaty::{
+    fen::{self, Fen},
+    Chess, FromSetup,
+};
 
 mod board;
 mod engine;
 
 fn main() {
-    let mut x = Bughouse::default();
-    x = x
-        .play(&Move::Normal {
-            role: Role::Pawn,
-            from: Square::E2,
-            to: Square::E4,
-            capture: None,
-            promotion: None,
-        })
-        .expect("Illegal move");
-    println!("{}", epd(&x));
+    let fen = Fen::from_str("7k/8/b5K1/3R4/8/1P4P1/8/8 w - - 0 1").expect("invalid fen");
+    let mut engine = Engine::new(&fen).expect("Engine failed to be created");
+    println!("Finding best first move for white");
+    println!("{:?}", engine.go(Until::Milliseconds(10_000)));
 }

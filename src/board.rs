@@ -7,6 +7,7 @@ use shakmaty::{
 };
 use shakmaty::{Position, Setup};
 
+#[derive(Debug)]
 pub struct BughousePositionError {
     errors: PositionErrorKinds,
 }
