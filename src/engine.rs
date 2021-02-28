@@ -152,11 +152,19 @@ impl Tree {
     pub fn execute_mcts(&mut self) {
         let root_id = NodeId(0);
         let mut branch = self.select_branch(root_id);
-        let leaf = *branch.last().expect("Branch should not be empty");
-        self.expand_tree(leaf);
-        if let Some(c) = self[leaf].children.choose(&mut rand::thread_rng()) {
+        let leaf_id = *branch.last().expect("Branch should not be empty");
+        let leaf = &self[leaf_id];
+        // println!("leaf last move {:?}", leaf.last_move);
+        self.expand_tree(leaf_id);
+        if let Some(c) = self[leaf_id].children.choose(&mut rand::thread_rng()) {
             let outcome = Tree::simulate(&self[*c].position);
             branch.push(*c);
+            self.backpropagate(branch, outcome);
+        } else {
+            let outcome = self[leaf_id]
+                .position
+                .outcome()
+                .expect("No child nodes exist and the position is not final");
             self.backpropagate(branch, outcome);
         }
     }
@@ -169,7 +177,6 @@ impl Tree {
                 if let Some(most_visited_child_id) = most_visited_child_or_none {
                     let most_visited_child = &self[most_visited_child_id];
                     let next_child = &self[*next_child_id];
-                    println!("This node was simulated {} times", next_child.simulations);
                     if next_child.simulations > most_visited_child.simulations {
                         Some(*next_child_id)
                     } else {
@@ -186,11 +193,6 @@ impl Tree {
             .expect("Every node except the root should have a last_move");
         Some(best_move)
     }
-}
-
-pub enum Until {
-    Milliseconds(u64),
-    Iterations(usize),
 }
 
 pub struct Engine {
@@ -212,19 +214,11 @@ impl Engine {
             tree: Tree::new(root),
         })
     }
-    pub fn go(&mut self, until: Until) -> Option<Move> {
+    pub fn go(&mut self, max_milliseconds: u64) -> Option<Move> {
         let start = Instant::now();
-        let mut iterations = 0;
-        while match until {
-            Until::Milliseconds(max_milliseconds) => {
-                start.elapsed() < Duration::from_millis(max_milliseconds)
-            }
-            Until::Iterations(max_iterations) => iterations < max_iterations,
-        } {
+        while start.elapsed() < Duration::from_millis(max_milliseconds) {
             self.tree.execute_mcts();
-            iterations += 1;
         }
-        println!("iterations: {}", iterations);
         self.tree.best_move()
     }
 }
